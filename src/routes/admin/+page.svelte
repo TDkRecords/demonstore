@@ -65,21 +65,23 @@
     const formatDate = (dateValue) => {
         try {
             if (!dateValue) return "Sin fecha";
-            
+
             // Handle both Date objects and Firestore Timestamps
-            const date = dateValue?.toDate ? dateValue.toDate() : new Date(dateValue);
-            
+            const date = dateValue?.toDate
+                ? dateValue.toDate()
+                : new Date(dateValue);
+
             // Check if date is valid
             if (isNaN(date.getTime())) return "Fecha inválida";
-            
+
             const options = {
                 day: "2-digit",
                 month: "short",
                 hour: "2-digit",
                 minute: "2-digit",
-                hour12: true
+                hour12: true,
             };
-            
+
             return date.toLocaleDateString("es-CO", options);
         } catch (error) {
             console.error("Error formatting date:", error);
@@ -346,7 +348,7 @@
             </h2>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <a
-                    href="/admin/prendas/nuevo"
+                    href="/admin/prendas"
                     class="bg-gray-800 p-4 rounded-lg border border-gray-700 hover:border-red-500 transition-colors text-center"
                 >
                     <div class="text-red-400 mb-2">
@@ -355,7 +357,7 @@
                     <span class="text-sm">Nuevo Producto</span>
                 </a>
                 <a
-                    href="/admin/proveedores/nuevo"
+                    href="/admin/proveedores"
                     class="bg-gray-800 p-4 rounded-lg border border-gray-700 hover:border-blue-500 transition-colors text-center"
                 >
                     <div class="text-blue-400 mb-2">
@@ -364,22 +366,13 @@
                     <span class="text-sm">Nuevo Proveedor</span>
                 </a>
                 <a
-                    href="/admin/cuentas/nuevo"
+                    href="/admin/cuentas"
                     class="bg-gray-800 p-4 rounded-lg border border-gray-700 hover:border-green-500 transition-colors text-center"
                 >
                     <div class="text-green-400 mb-2">
                         <i class="fas fa-plus-circle text-2xl"></i>
                     </div>
                     <span class="text-sm">Nueva Transacción</span>
-                </a>
-                <a
-                    href="/admin/prendas"
-                    class="bg-gray-800 p-4 rounded-lg border border-gray-700 hover:border-purple-500 transition-colors text-center"
-                >
-                    <div class="text-purple-400 mb-2">
-                        <i class="fas fa-list text-2xl"></i>
-                    </div>
-                    <span class="text-sm">Ver Inventario</span>
                 </a>
             </div>
         </div>

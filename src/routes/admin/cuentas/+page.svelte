@@ -16,6 +16,8 @@
     let accounts = [];
     let productos = [];
     let tallasVendidas = [];
+    let currentTalla = "";
+    let currentCantidad = 1;
 
     // Constants
     const tipos = [
@@ -34,14 +36,19 @@
     // Reactive computations
     $: selectedProduct = productos.find((p) => p.docId === formData.productoId);
     $: isVenta = formData.tipo === "ingreso" && formData.categoria === "venta";
-    $: tallasDisponibles = getTallasDisponibles();
+    $: tallasDisponibles = getTallasDisponibles(
+        selectedProduct,
+        tallasVendidas,
+    );
     $: montoTotal = tallasVendidas.reduce(
         (sum, item) => sum + item.cantidad * item.precioUnitario,
         0,
     );
 
-    // Update monto when tallasVendidas changes
-    $: if (isVenta) formData.monto = montoTotal;
+    // Update monto when tallasVendidas changes (solo para ventas)
+    $: if (isVenta) {
+        formData.monto = montoTotal;
+    }
 
     $: totalIngresos = accounts
         .filter((a) => a.tipo === "ingreso")
@@ -69,21 +76,20 @@
         formData.fecha = new Date().toISOString().split("T")[0];
     }
 
-    function getTallasDisponibles() {
-        if (!selectedProduct) return [];
+    function getTallasDisponibles(product, vendidas) {
+        if (!product) return [];
 
-        if (selectedProduct.clothingType === "top") {
-            return Object.entries(selectedProduct.sizes || {})
+        if (product.clothingType === "top") {
+            return Object.entries(product.sizes || {})
                 .filter(([_, stock]) => stock > 0)
                 .map(([talla, stock]) => {
                     const vendido =
-                        tallasVendidas.find((t) => t.talla === talla)
-                            ?.cantidad || 0;
+                        vendidas.find((t) => t.talla === talla)?.cantidad || 0;
                     return { talla, stock, disponible: stock - vendido };
                 })
                 .filter((t) => t.disponible > 0);
         } else {
-            const sizes = selectedProduct.numericSizes || [];
+            const sizes = product.numericSizes || [];
             return sizes
                 .map((sizeObj, index) => {
                     let talla, stock;
@@ -102,8 +108,7 @@
                     }
 
                     const vendido =
-                        tallasVendidas.find((t) => t.talla === talla)
-                            ?.cantidad || 0;
+                        vendidas.find((t) => t.talla === talla)?.cantidad || 0;
                     return { talla, stock, disponible: stock - vendido };
                 })
                 .filter((item) => item && item.disponible > 0);
@@ -120,30 +125,47 @@
 
     function handleProductoChange() {
         tallasVendidas = [];
+        currentTalla = "";
+        currentCantidad = 1;
     }
 
-    function agregarTalla(talla, cantidad) {
-        if (!talla || cantidad < 1) return;
-
-        const tallaInfo = tallasDisponibles.find((t) => t.talla === talla);
-        if (!tallaInfo || tallaInfo.disponible < cantidad) {
-            alert("No hay suficiente stock disponible");
+    function agregarTalla() {
+        if (!currentTalla || currentCantidad < 1) {
+            alert("Seleccione una talla y cantidad válida");
             return;
         }
 
-        const existing = tallasVendidas.find((t) => t.talla === talla);
+        const tallaInfo = tallasDisponibles.find(
+            (t) => t.talla === currentTalla,
+        );
+        if (!tallaInfo || tallaInfo.disponible < currentCantidad) {
+            alert("No hay suficiente stock disponible para esta talla");
+            return;
+        }
+
+        const existing = tallasVendidas.find((t) => t.talla === currentTalla);
         if (existing) {
-            existing.cantidad += cantidad;
+            const nuevaCantidad = existing.cantidad + currentCantidad;
+            if (nuevaCantidad > tallaInfo.stock) {
+                alert("La cantidad total excede el stock disponible");
+                return;
+            }
+            existing.cantidad = nuevaCantidad;
+            tallasVendidas = [...tallasVendidas]; // Trigger reactivity
         } else {
             tallasVendidas = [
                 ...tallasVendidas,
                 {
-                    talla,
-                    cantidad,
+                    talla: currentTalla,
+                    cantidad: currentCantidad,
                     precioUnitario: selectedProduct.valorVenta,
                 },
             ];
         }
+
+        // Reset selection
+        currentTalla = "";
+        currentCantidad = 1;
     }
 
     function quitarTalla(index) {
@@ -154,6 +176,8 @@
         formData = { ...emptyAccount() };
         editingDocId = null;
         tallasVendidas = [];
+        currentTalla = "";
+        currentCantidad = 1;
         setTodayDate();
     }
 
@@ -170,11 +194,13 @@
                 }
                 payload.tallasVendidas = [...tallasVendidas];
                 payload.productoNombre = selectedProduct?.name;
+                payload.monto = montoTotal;
             }
 
             await saveAccount(payload, editingDocId);
             await refresh();
             clearForm();
+            alert("Transacción guardada exitosamente");
         } catch (error) {
             console.error("Error al guardar:", error);
             alert(error.message || "Error al guardar la transacción");
@@ -193,8 +219,17 @@
             setTodayDate();
         }
 
+        // Reset tallas
+        tallasVendidas = [];
+        currentTalla = "";
+        currentCantidad = 1;
+
         // Load sales data
-        if (isVenta && account.tallasVendidas) {
+        if (
+            account.tipo === "ingreso" &&
+            account.categoria === "venta" &&
+            account.tallasVendidas
+        ) {
             tallasVendidas = [...account.tallasVendidas];
         }
 
@@ -207,6 +242,7 @@
             await deleteAccountByDocId(docId);
             await refresh();
             if (editingDocId === docId) clearForm();
+            alert("Transacción eliminada exitosamente");
         } catch (error) {
             console.error("Error al eliminar:", error);
             alert("Error al eliminar la transacción");
@@ -252,7 +288,7 @@
                     {editingDocId ? "Editar transacción" : "Nueva transacción"}
                 </h2>
 
-                <form on:submit={handleSave} class="space-y-4">
+                <form on:submit|preventDefault={handleSave} class="space-y-4">
                     <!-- Transaction Type -->
                     <div>
                         <label
@@ -341,7 +377,7 @@
                                             Talla
                                         </label>
                                         <select
-                                            bind:value={formData.currentTalla}
+                                            bind:value={currentTalla}
                                             class="w-full px-3 py-2 rounded bg-gray-900 text-white border border-gray-700"
                                         >
                                             <option value=""
@@ -363,21 +399,16 @@
                                         <input
                                             type="number"
                                             min="1"
-                                            bind:value={
-                                                formData.currentCantidad
-                                            }
+                                            bind:value={currentCantidad}
                                             class="w-full px-3 py-2 rounded bg-gray-900 text-white border border-gray-700"
                                         />
                                     </div>
                                     <button
                                         type="button"
-                                        on:click={() =>
-                                            agregarTalla(
-                                                formData.currentTalla,
-                                                formData.currentCantidad || 1,
-                                            )}
-                                        class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded"
-                                        disabled={!formData.currentTalla}
+                                        on:click={agregarTalla}
+                                        class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                                        disabled={!currentTalla ||
+                                            currentCantidad < 1}
                                         aria-label="Agregar talla"
                                     >
                                         <i class="fas fa-plus"></i>
@@ -387,43 +418,66 @@
                                 <!-- Added Sizes List -->
                                 {#if tallasVendidas.length > 0}
                                     <div
-                                        class="border border-gray-700 rounded p-2"
+                                        class="border border-gray-700 rounded p-3 bg-gray-900"
                                     >
                                         <h4
                                             class="text-sm font-medium text-gray-300 mb-2"
                                         >
                                             Tallas a vender:
                                         </h4>
-                                        <ul class="space-y-1">
+                                        <ul class="space-y-2">
                                             {#each tallasVendidas as item, i}
                                                 <li
-                                                    class="flex justify-between items-center text-sm"
+                                                    class="flex justify-between items-center text-sm bg-gray-800 p-2 rounded"
                                                 >
-                                                    <span>
-                                                        {item.talla} x {item.cantidad}
-                                                        = ${(
-                                                            item.cantidad *
-                                                            item.precioUnitario
-                                                        ).toLocaleString()}
+                                                    <span class="text-gray-200">
+                                                        Talla <strong
+                                                            >{item.talla}</strong
+                                                        >
+                                                        x {item.cantidad}
+                                                        <span
+                                                            class="text-gray-400 text-xs block"
+                                                        >
+                                                            ${item.precioUnitario?.toLocaleString()}
+                                                            c/u
+                                                        </span>
                                                     </span>
-                                                    <button
-                                                        type="button"
-                                                        on:click={() =>
-                                                            quitarTalla(i)}
-                                                        class="text-red-400 hover:text-red-300"
-                                                        aria-label="Quitar talla"
+                                                    <div
+                                                        class="flex items-center gap-3"
                                                     >
-                                                        <i class="fas fa-times"
-                                                        ></i>
-                                                    </button>
+                                                        <span
+                                                            class="font-medium text-green-400"
+                                                        >
+                                                            ${(
+                                                                item.cantidad *
+                                                                item.precioUnitario
+                                                            ).toLocaleString()}
+                                                        </span>
+                                                        <button
+                                                            type="button"
+                                                            on:click={() =>
+                                                                quitarTalla(i)}
+                                                            class="text-red-400 hover:text-red-300 p-1"
+                                                            aria-label="Quitar talla"
+                                                        >
+                                                            <i
+                                                                class="fas fa-times"
+                                                            ></i>
+                                                        </button>
+                                                    </div>
                                                 </li>
                                             {/each}
                                             <li
-                                                class="pt-2 mt-2 border-t border-gray-700 font-medium"
+                                                class="pt-2 mt-2 border-t border-gray-700 font-medium flex justify-between items-center"
                                             >
-                                                Total: {formatCurrency(
-                                                    montoTotal,
-                                                )}
+                                                <span class="text-gray-300"
+                                                    >Total:</span
+                                                >
+                                                <span
+                                                    class="text-xl text-green-400"
+                                                >
+                                                    {formatCurrency(montoTotal)}
+                                                </span>
                                             </li>
                                         </ul>
                                     </div>

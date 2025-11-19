@@ -9,7 +9,8 @@ import {
     getDocs,
     serverTimestamp,
     Timestamp,
-    runTransaction
+    runTransaction,
+    getDoc
 } from "firebase/firestore";
 import { db } from "$lib/js/firebase.js";
 
@@ -25,9 +26,7 @@ export const emptyAccount = () => ({
     fechaRegistro: "",
     productoId: "",
     productoNombre: "",
-    tallasVendidas: [],
-    currentTalla: "",
-    currentCantidad: 1
+    tallasVendidas: []
 });
 
 export async function loadAccounts() {
@@ -38,10 +37,6 @@ export async function loadAccounts() {
 
 function preparePayload(account, isEdit = false) {
     const payload = { ...account };
-
-    // Remove temporary UI fields
-    delete payload.currentTalla;
-    delete payload.currentCantidad;
 
     // Convert date
     if (payload.fecha && !(payload.fecha instanceof Timestamp)) {
@@ -58,44 +53,51 @@ function preparePayload(account, isEdit = false) {
 
 function updateProductStock(transaction, productoRef, producto, tallasVendidas) {
     let totalVenta = 0;
+    const updatedSizes = { ...producto.sizes };
+    const updatedNumericSizes = [...(producto.numericSizes || [])];
 
     for (const venta of tallasVendidas) {
         const { talla, cantidad, precioUnitario } = venta;
 
         if (producto.clothingType === 'top') {
             // Top clothing (XS, S, M, L, etc.)
-            if (!producto.sizes[talla] || producto.sizes[talla] < cantidad) {
-                throw new Error(`Stock insuficiente para talla ${talla}`);
+            if (!updatedSizes[talla] || updatedSizes[talla] < cantidad) {
+                throw new Error(`Stock insuficiente para talla ${talla}. Disponible: ${updatedSizes[talla] || 0}, Requerido: ${cantidad}`);
             }
-            producto.sizes[talla] -= cantidad;
+            updatedSizes[talla] -= cantidad;
         } else {
             // Bottom clothing (numeric sizes)
-            const sizeIndex = producto.numericSizes.findIndex((size, idx) => {
-                if (typeof size === 'number' || typeof size === 'string') {
-                    return String(size) === String(talla);
-                }
-                if (size && typeof size === 'object') {
-                    return String(size.size || size.talla) === String(talla);
-                }
-                return false;
-            });
+            let tallasRemovidas = 0;
 
-            if (sizeIndex === -1) {
-                throw new Error(`Talla ${talla} no encontrada`);
+            for (let i = updatedNumericSizes.length - 1; i >= 0 && tallasRemovidas < cantidad; i--) {
+                const size = updatedNumericSizes[i];
+                let sizeValue;
+
+                if (typeof size === 'number' || typeof size === 'string') {
+                    sizeValue = String(size);
+                } else if (size && typeof size === 'object') {
+                    sizeValue = String(size.size || size.talla);
+                }
+
+                if (sizeValue === String(talla)) {
+                    if (typeof size === 'number' || typeof size === 'string') {
+                        // Simple array: remove the item
+                        updatedNumericSizes.splice(i, 1);
+                        tallasRemovidas++;
+                    } else if (size && typeof size === 'object') {
+                        // Object format: decrement stock
+                        const currentStock = size.stock || 0;
+                        if (currentStock < cantidad - tallasRemovidas) {
+                            throw new Error(`Stock insuficiente para talla ${talla}`);
+                        }
+                        size.stock -= (cantidad - tallasRemovidas);
+                        tallasRemovidas = cantidad;
+                    }
+                }
             }
 
-            const sizeObj = producto.numericSizes[sizeIndex];
-
-            if (typeof sizeObj === 'number' || typeof sizeObj === 'string') {
-                // Simple array: remove sold items
-                producto.numericSizes.splice(sizeIndex, Math.min(cantidad, producto.numericSizes.length - sizeIndex));
-            } else if (sizeObj && typeof sizeObj === 'object') {
-                // Object format: decrement stock
-                const currentStock = sizeObj.stock || 0;
-                if (currentStock < cantidad) {
-                    throw new Error(`Stock insuficiente para talla ${talla}`);
-                }
-                sizeObj.stock -= cantidad;
+            if (tallasRemovidas < cantidad) {
+                throw new Error(`Stock insuficiente para talla ${talla}. Solo se encontraron ${tallasRemovidas} unidades.`);
             }
         }
 
@@ -104,13 +106,13 @@ function updateProductStock(transaction, productoRef, producto, tallasVendidas) 
 
     // Calculate new total stock
     const newStock = producto.clothingType === 'top'
-        ? Object.values(producto.sizes).reduce((a, b) => a + b, 0)
-        : producto.numericSizes.length;
+        ? Object.values(updatedSizes).reduce((a, b) => a + b, 0)
+        : updatedNumericSizes.length;
 
     // Update product
     transaction.update(productoRef, {
-        sizes: producto.sizes,
-        numericSizes: producto.numericSizes,
+        sizes: updatedSizes,
+        numericSizes: updatedNumericSizes,
         stock: newStock
     });
 
@@ -127,11 +129,13 @@ async function saveProductSale(payload, editingDocId) {
             throw new Error('Producto no encontrado');
         }
 
+        const productoData = productoDoc.data();
+
         // Update stock and calculate total
         const { totalVenta, productoNombre } = updateProductStock(
             transaction,
             productoRef,
-            productoDoc.data(),
+            productoData,
             payload.tallasVendidas
         );
 
@@ -140,13 +144,14 @@ async function saveProductSale(payload, editingDocId) {
 
         // Save transaction
         if (editingDocId) {
-            transaction.update(doc(db, COLL, editingDocId), payload);
+            const cuentaRef = doc(db, COLL, editingDocId);
+            transaction.update(cuentaRef, payload);
         } else {
             const newDocRef = doc(collection(db, COLL));
             transaction.set(newDocRef, payload);
         }
 
-        return { ok: true };
+        return { ok: true, totalVenta };
     });
 }
 

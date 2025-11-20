@@ -20,6 +20,19 @@
     let editingDocId = null; // Firestore docId when editing
     let product = emptyProduct();
 
+    // Handle edit product from ProductCard
+    function handleEditProduct(event) {
+        const productToEdit = event.detail.product;
+        product = JSON.parse(JSON.stringify(productToEdit)); // Deep clone the product
+        editingDocId = productToEdit.docId;
+
+        // Scroll to the form
+        const formElement = document.querySelector("form");
+        if (formElement) {
+            formElement.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+    }
+
     // REACTIVIDAD DEL STOCK
     $: {
         if (product.clothingType === "top") {
@@ -43,14 +56,12 @@
     $: preview = previewImage();
 
     onMount(async () => {
-        await refresh();
+        [products, providers, categories] = await Promise.all([
+            loadProducts(),
+            loadProviders(),
+            loadCategories(),
+        ]);
     });
-
-    async function refresh() {
-        products = await loadProducts();
-        providers = await loadProviders();
-        categories = await loadCategories();
-    }
 
     function clearForm() {
         editingDocId = null;
@@ -115,13 +126,36 @@
     }
 
     async function handleSave() {
-        // ensure id for new product
-        if (!product.id && !editingDocId) {
-            product.id = await getNextProductId();
+        try {
+            // ensure id for new product
+            if (!product.id && !editingDocId) {
+                product.id = await getNextProductId();
+            }
+
+            // Save the product and get the updated docId
+            const docId = await saveProduct(product, editingDocId);
+
+            // Update the products list
+            const updatedProducts = await loadProducts();
+            products = updatedProducts;
+
+            // If it was an edit, update the product in the list
+            if (editingDocId) {
+                const index = products.findIndex(
+                    (p) => p.docId === editingDocId,
+                );
+                if (index !== -1) {
+                    products[index] = { ...product, docId: editingDocId };
+                }
+            }
+
+            clearForm();
+        } catch (error) {
+            console.error("Error saving product:", error);
+            alert(
+                "Error al guardar el producto. Por favor, inténtalo de nuevo.",
+            );
         }
-        await saveProduct(product, editingDocId);
-        clearForm();
-        await refresh();
     }
 
     async function handleDelete(docId) {
@@ -129,11 +163,14 @@
             return;
         try {
             await deleteProductByDocId(docId);
+
+            // Update the local state
+            products = products.filter((p) => p.docId !== docId);
+
             // Clear the form if the deleted product was being edited
             if (editingDocId === docId) {
                 clearForm();
             }
-            await refresh();
         } catch (error) {
             console.error("Error al eliminar el producto:", error);
             alert(
@@ -165,7 +202,7 @@
                     {editingDocId ? "Editar Producto" : "Agregar Producto"}
                 </h2>
 
-                <form on:submit|preventDefault={handleSave} class="space-y-4">
+                <form on:submit={handleSave} class="space-y-4">
                     <!-- Nombre -->
                     <div>
                         <label for="name" class="text-sm text-gray-300">
@@ -443,9 +480,7 @@
 
             <!-- LISTA (OCUPA 2 COLUMNAS EN DESKTOP) -->
             <section class="lg:col-span-2">
-                <div
-                    class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4"
-                >
+                <div>
                     {#if products.length === 0}
                         <div
                             class="bg-gray-800 col-span-full rounded-lg border-2 border-dashed border-gray-700 p-8 text-center"
@@ -460,16 +495,9 @@
                             </p>
                         </div>
                     {:else}
-                        {#each products as p (p.docId)}
-                            <ProductCard
-                                product={p}
-                                {providers}
-                                {categories}
-                                {imgSrc}
-                                onEdit={() => startEdit(p)}
-                                onDelete={() => handleDelete(p.docId)}
-                            />
-                        {/each}
+                        <div class="container mx-auto">
+                            <ProductCard on:edit={handleEditProduct} />
+                        </div>
                     {/if}
                 </div>
             </section>

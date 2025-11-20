@@ -86,10 +86,10 @@ export async function getFinancialSummary() {
     try {
         const transactionsRef = collection(db, 'cuentas');
         const snapshot = await getDocs(transactionsRef);
-        
+
         let ingresos = 0;
         let gastos = 0;
-        
+
         snapshot.docs.forEach(doc => {
             const data = doc.data();
             const monto = Number(data.monto) || 0;
@@ -99,7 +99,7 @@ export async function getFinancialSummary() {
                 gastos += monto;
             }
         });
-        
+
         return {
             ingresos,
             gastos,

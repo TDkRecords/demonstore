@@ -84,31 +84,19 @@
                 .filter(([_, stock]) => stock > 0)
                 .map(([talla, stock]) => {
                     const vendido =
-                        vendidas.find((t) => t.talla === talla)?.cantidad || 0;
+                        vendidas.find((t) => t.talla == talla)?.cantidad || 0;
                     return { talla, stock, disponible: stock - vendido };
                 })
                 .filter((t) => t.disponible > 0);
         } else {
             const sizes = product.numericSizes || [];
             return sizes
-                .map((sizeObj, index) => {
-                    let talla, stock;
-
-                    if (
-                        typeof sizeObj === "number" ||
-                        typeof sizeObj === "string"
-                    ) {
-                        talla = String(sizeObj);
-                        stock = 1;
-                    } else if (sizeObj && typeof sizeObj === "object") {
-                        talla = String(sizeObj.size || sizeObj.talla || index);
-                        stock = sizeObj.stock || 0;
-                    } else {
-                        return null;
-                    }
-
+                .map((sizeObj) => {
+                    if (!sizeObj) return null;
+                    const talla = String(sizeObj.size);
+                    const stock = sizeObj.quantity || 0;
                     const vendido =
-                        vendidas.find((t) => t.talla === talla)?.cantidad || 0;
+                        vendidas.find((t) => t.talla == talla)?.cantidad || 0;
                     return { talla, stock, disponible: stock - vendido };
                 })
                 .filter((item) => item && item.disponible > 0);
@@ -292,6 +280,7 @@
                     <!-- Transaction Type -->
                     <div>
                         <label
+                            for="Tipo"
                             class="block text-sm font-medium text-gray-300 mb-1"
                         >
                             Tipo
@@ -372,6 +361,7 @@
                                 <div class="flex items-end gap-2">
                                     <div class="flex-1">
                                         <label
+                                            for="talla"
                                             class="block text-sm font-medium text-gray-300 mb-1"
                                         >
                                             Talla
@@ -392,6 +382,7 @@
                                     </div>
                                     <div class="w-24">
                                         <label
+                                            for="cantidad"
                                             class="block text-sm font-medium text-gray-300 mb-1"
                                         >
                                             Cantidad

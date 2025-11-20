@@ -5,7 +5,7 @@
 </script>
 
 <!-- NAVBAR -->
-<nav class="bg-gray-950 px-5 py-3">
+<nav class="bg-gray-800 px-5 py-3">
     <div class="flex justify-between items-center">
         <!-- IZQUIERDA -->
         <a href="/" class="flex items-center gap-2 text-white">
@@ -27,7 +27,7 @@
         <div class="hidden md:flex items-center gap-2">
             <a
                 href="/admin"
-                class="flex items-center gap-1 bg-red-600 px-4 py-2 rounded hover:bg-red-700 transition text-white"
+                class="flex items-center gap-1 px-4 py-2 rounded-2xl hover:bg-gray-700 transition ease-in-out duration-300 text-white"
             >
                 <i class="fas fa-home"></i>
                 <span>Panel</span>
@@ -35,7 +35,7 @@
 
             <a
                 href="/admin/prendas"
-                class="flex items-center gap-1 bg-red-600 px-4 py-2 rounded hover:bg-red-700 transition text-white"
+                class="flex items-center gap-1 px-4 py-2 rounded-2xl hover:bg-gray-700 transition ease-in-out duration-300 text-white"
             >
                 <i class="fas fa-tshirt"></i>
                 <span>Prendas</span>
@@ -43,7 +43,7 @@
 
             <a
                 href="/admin/proveedores"
-                class="flex items-center gap-1 bg-red-600 px-4 py-2 rounded hover:bg-red-700 transition text-white"
+                class="flex items-center gap-1 px-4 py-2 rounded-2xl hover:bg-gray-700 transition ease-in-out duration-300 text-white"
             >
                 <i class="fas fa-truck"></i>
                 <span>Proveedores</span>
@@ -51,7 +51,7 @@
 
             <a
                 href="/admin/cuentas"
-                class="flex items-center gap-1 bg-red-600 px-4 py-2 rounded hover:bg-red-700 transition text-white"
+                class="flex items-center gap-1 px-4 py-2 rounded-2xl hover:bg-gray-700 transition ease-in-out duration-300 text-white"
             >
                 <i class="fas fa-coins"></i>
                 <span>Cuentas</span>
@@ -64,28 +64,28 @@
         <div class="flex flex-col gap-2 mt-3 md:hidden animate-fadeIn">
             <a
                 href="/admin"
-                class="flex items-center gap-2 bg-red-600 px-4 py-2 rounded hover:bg-red-700 transition text-white"
+                class="flex items-center gap-1 px-4 py-2 rounded-2xl hover:bg-gray-700 transition ease-in-out duration-300 text-white"
             >
                 <i class="fas fa-home"></i> Panel
             </a>
 
             <a
                 href="/admin/prendas"
-                class="flex items-center gap-2 bg-red-600 px-4 py-2 rounded hover:bg-red-700 transition text-white"
+                class="flex items-center gap-1 px-4 py-2 rounded-2xl hover:bg-gray-700 transition ease-in-out duration-300 text-white"
             >
                 <i class="fas fa-tshirt"></i> Prendas
             </a>
 
             <a
                 href="/admin/proveedores"
-                class="flex items-center gap-2 bg-red-600 px-4 py-2 rounded hover:bg-red-700 transition text-white"
+                class="flex items-center gap-1 px-4 py-2 rounded-2xl hover:bg-gray-700 transition ease-in-out duration-300 text-white"
             >
                 <i class="fas fa-truck"></i> Proveedores
             </a>
 
             <a
                 href="/admin/cuentas"
-                class="flex items-center gap-2 bg-red-600 px-4 py-2 rounded hover:bg-red-700 transition text-white"
+                class="flex items-center gap-1 px-4 py-2 rounded-2xl hover:bg-gray-700 transition ease-in-out duration-300 text-white"
             >
                 <i class="fas fa-coins"></i> Cuentas
             </a>

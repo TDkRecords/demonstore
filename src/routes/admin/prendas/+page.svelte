@@ -26,9 +26,8 @@
                 0,
             );
         } else {
-            // For bottom, calculate total from numericSizes array length
             product.stock = Array.isArray(product.numericSizes)
-                ? product.numericSizes.length
+                ? product.numericSizes.reduce((acc, x) => acc + x.quantity, 0)
                 : 0;
         }
     }
@@ -85,6 +84,42 @@
         window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
+    // Variables temporales para agregar tallas
+    let newSize = "";
+    let newQuantity = "";
+
+    // Función para agregar talla + cantidad
+    function addNumericSize() {
+        const size = parseInt(newSize);
+        const quantity = parseInt(newQuantity);
+
+        if (!size || size <= 0 || !quantity || quantity <= 0) {
+            alert("Ingrese talla y cantidad válidas (mayores a 0).");
+            return;
+        }
+
+        // Revisar si ya existe esa talla
+        const existing = product.numericSizes.find((x) => x.size === size);
+        if (existing) {
+            existing.quantity += quantity;
+        } else {
+            product.numericSizes = [
+                ...product.numericSizes,
+                { size, quantity },
+            ];
+        }
+
+        newSize = "";
+        newQuantity = "";
+    }
+
+    // Eliminar talla
+    function removeNumericSize(index) {
+        product.numericSizes = product.numericSizes.filter(
+            (_, i) => i !== index,
+        );
+    }
+
     async function handleSave() {
         // ensure id for new product
         if (!product.id && !editingDocId) {
@@ -126,25 +161,23 @@
 
                 <form on:submit|preventDefault={handleSave} class="space-y-4">
                     <!-- Nombre -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label for="name" class="text-sm text-gray-300"
-                                >Nombre</label
-                            >
-                            <input
-                                id="name"
-                                class="w-full px-3 py-2 rounded bg-gray-900 text-white"
-                                bind:value={product.name}
-                                required
-                            />
-                        </div>
+                    <div>
+                        <label for="name" class="text-sm text-gray-300">
+                            Nombre
+                        </label>
+                        <input
+                            id="name"
+                            class="w-full px-3 py-2 rounded bg-gray-900 text-white"
+                            bind:value={product.name}
+                            required
+                        />
                     </div>
 
                     <!-- Valor compra -->
                     <div>
-                        <label for="valorCompra" class="text-sm text-gray-300"
-                            >Valor de compra</label
-                        >
+                        <label for="valorCompra" class="text-sm text-gray-300">
+                            Valor de compra
+                        </label>
                         <input
                             id="valorCompra"
                             type="number"
@@ -156,9 +189,9 @@
 
                     <!-- Valor venta -->
                     <div>
-                        <label for="valorVenta" class="text-sm text-gray-300"
-                            >Valor de venta</label
-                        >
+                        <label for="valorVenta" class="text-sm text-gray-300">
+                            Valor de venta
+                        </label>
                         <input
                             id="valorVenta"
                             type="number"
@@ -170,9 +203,9 @@
 
                     <!-- Descripción -->
                     <div>
-                        <label for="description" class="text-sm text-gray-300"
-                            >Descripción</label
-                        >
+                        <label for="description" class="text-sm text-gray-300">
+                            Descripción
+                        </label>
                         <textarea
                             id="description"
                             rows="2"
@@ -183,9 +216,9 @@
 
                     <!-- Proveedor (select) -->
                     <div>
-                        <label for="provider" class="text-sm text-gray-300"
-                            >Proveedor</label
-                        >
+                        <label for="provider" class="text-sm text-gray-300">
+                            Proveedor
+                        </label>
                         <select
                             id="provider"
                             class="w-full px-3 py-2 rounded bg-gray-900 text-white"
@@ -203,9 +236,9 @@
 
                     <!-- Imagen -->
                     <div>
-                        <label for="image" class="text-sm text-gray-300"
-                            >Imagen (URL)</label
-                        >
+                        <label for="image" class="text-sm text-gray-300">
+                            Imagen (URL)
+                        </label>
                         <input
                             id="image"
                             class="w-full px-3 py-2 rounded bg-gray-900 text-white"
@@ -233,8 +266,8 @@
                     <!-- Tipo de prenda -->
                     <div class="mb-4">
                         <label
-                            class="text-sm text-gray-300 mb-2 block"
                             for="Tipo"
+                            class="text-sm text-gray-300 mb-2 block"
                         >
                             Tipo de prenda
                         </label>
@@ -263,8 +296,8 @@
                     <!-- Tallas -->
                     <div>
                         <label
-                            class="text-sm text-gray-300 mb-2 block"
                             for="tallas"
+                            class="text-sm text-gray-300 mb-2 block"
                         >
                             {product.clothingType === "top"
                                 ? "Tallas (Cantidad por talla)"
@@ -292,37 +325,66 @@
                                 {/each}
                             </div>
                         {:else}
-                            <div>
-                                <input
-                                    type="text"
-                                    class="w-full px-3 py-2 rounded bg-gray-900 text-white"
-                                    placeholder="Ej: 38, 40, 42, 44"
-                                    value={product.numericSizes.join(", ")}
-                                    on:input={(e) => {
-                                        const value = e.target.value;
-                                        product.numericSizes = value
-                                            .split(",")
-                                            .map((s) => s.trim())
-                                            .filter(
-                                                (s) => !isNaN(s) && s !== "",
-                                            )
-                                            .map(Number);
-                                    }}
-                                />
-                                <p class="text-xs text-gray-400 mt-1">
-                                    Tallas actuales: {product.numericSizes.join(
-                                        ", ",
-                                    ) || "Ninguna"}
-                                </p>
+                            <div class="space-y-2">
+                                <!-- Inputs para agregar talla + unidades -->
+                                <div
+                                    class="flex gap-2 flex-wrap sm:flex-nowrap"
+                                >
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        placeholder="Talla"
+                                        class="w-1/2 sm:w-1/3 px-3 py-2 rounded bg-gray-900 text-white"
+                                        bind:value={newSize}
+                                    />
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        placeholder="Unidades"
+                                        class="w-1/2 sm:w-1/3 px-3 py-2 rounded bg-gray-900 text-white"
+                                        bind:value={newQuantity}
+                                    />
+                                    <button
+                                        type="button"
+                                        class="px-3 py-2 bg-green-600 rounded hover:bg-green-700 flex-1 sm:flex-none"
+                                        on:click={addNumericSize}
+                                    >
+                                        <i class="fas fa-plus mr-1"></i> Agregar
+                                    </button>
+                                </div>
+
+                                <!-- Lista de tallas agregadas -->
+                                <div class="flex flex-wrap gap-2 mt-1">
+                                    {#each product.numericSizes as item, index}
+                                        <span
+                                            class="text-xs bg-gray-700 px-2 py-1 rounded-md border border-gray-600 flex items-center gap-1"
+                                        >
+                                            {item.size} — {item.quantity}
+                                            <button
+                                                type="button"
+                                                class="ml-1 text-red-400 hover:text-red-600"
+                                                on:click={() =>
+                                                    removeNumericSize(index)}
+                                            >
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </span>
+                                    {/each}
+                                    {#if product.numericSizes.length === 0}
+                                        <span class="text-xs text-gray-500"
+                                            >Sin tallas registradas</span
+                                        >
+                                    {/if}
+                                </div>
                             </div>
                         {/if}
                     </div>
 
                     <!-- Stock total -->
                     <div>
-                        <label for="stock" class="text-sm text-gray-300"
-                            >Stock total</label
-                        >
+                        <label for="stock" class="text-sm text-gray-300">
+                            Stock total
+                        </label>
                         <input
                             id="stock"
                             readonly

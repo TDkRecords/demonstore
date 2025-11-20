@@ -117,29 +117,37 @@
         <!-- TALLAS -->
         <div class="mt-4">
             <div class="text-xs text-gray-400">
-                {product.clothingType === 'top' ? 'Tallas disponibles (cantidad)' : 'Tallas disponibles'}
+                {product.clothingType === "top"
+                    ? "Tallas disponibles (cantidad)"
+                    : "Tallas disponibles"}
             </div>
             <div class="flex flex-wrap gap-2 mt-2">
-                {#if product.clothingType === 'top'}
+                {#if product.clothingType === "top"}
                     {#each Object.entries(product.sizes || {}).filter(([, q]) => q > 0) as [sz, q]}
-                        <span class="text-xs bg-gray-700 px-2 py-1 rounded-md border border-gray-600">
+                        <span
+                            class="text-xs bg-gray-700 px-2 py-1 rounded-md border border-gray-600"
+                        >
                             <strong>{sz.toUpperCase()}:</strong>
                             <span class="ml-1">{q}</span>
                         </span>
                     {/each}
-                    {#if !Object.values(product.sizes || {}).some(q => q > 0)}
-                        <span class="text-xs text-gray-500">Sin tallas registradas</span>
+                    {#if !Object.values(product.sizes || {}).some((q) => q > 0)}
+                        <span class="text-xs text-gray-500"
+                            >Sin tallas registradas</span
+                        >
                     {/if}
+                {:else if product.numericSizes?.length > 0}
+                    {#each product.numericSizes as item}
+                        <span
+                            class="text-xs bg-gray-700 px-2 py-1 rounded-md border border-gray-600"
+                        >
+                            {item.size} — {item.quantity}
+                        </span>
+                    {/each}
                 {:else}
-                    {#if product.numericSizes?.length > 0}
-                        {#each product.numericSizes as size}
-                            <span class="text-xs bg-gray-700 px-2 py-1 rounded-md border border-gray-600">
-                                {size}
-                            </span>
-                        {/each}
-                    {:else}
-                        <span class="text-xs text-gray-500">Sin tallas registradas</span>
-                    {/if}
+                    <span class="text-xs text-gray-500"
+                        >Sin tallas registradas</span
+                    >
                 {/if}
             </div>
         </div>

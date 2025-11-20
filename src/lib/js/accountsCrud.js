@@ -85,12 +85,12 @@ function updateProductStock(transaction, productoRef, producto, tallasVendidas) 
                         updatedNumericSizes.splice(i, 1);
                         tallasRemovidas++;
                     } else if (size && typeof size === 'object') {
-                        // Object format: decrement stock
-                        const currentStock = size.stock || 0;
+                        // Object format: decrement quantity
+                        const currentStock = size.quantity || 0;
                         if (currentStock < cantidad - tallasRemovidas) {
                             throw new Error(`Stock insuficiente para talla ${talla}`);
                         }
-                        size.stock -= (cantidad - tallasRemovidas);
+                        size.quantity -= (cantidad - tallasRemovidas);
                         tallasRemovidas = cantidad;
                     }
                 }

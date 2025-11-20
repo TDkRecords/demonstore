@@ -34,11 +34,11 @@
             </a>
 
             <a
-                href="/admin/prendas"
+                href="/admin/categorias"
                 class="flex items-center gap-1 px-4 py-2 rounded-2xl hover:bg-gray-700 transition ease-in-out duration-300 text-white"
             >
-                <i class="fas fa-tshirt"></i>
-                <span>Prendas</span>
+                <i class="fas fa-tags"></i>
+                <span>Categorías</span>
             </a>
 
             <a
@@ -47,6 +47,14 @@
             >
                 <i class="fas fa-truck"></i>
                 <span>Proveedores</span>
+            </a>
+
+            <a
+                href="/admin/prendas"
+                class="flex items-center gap-1 px-4 py-2 rounded-2xl hover:bg-gray-700 transition ease-in-out duration-300 text-white"
+            >
+                <i class="fas fa-tshirt"></i>
+                <span>Prendas</span>
             </a>
 
             <a

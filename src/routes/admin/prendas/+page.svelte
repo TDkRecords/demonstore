@@ -11,10 +11,12 @@
     } from "$lib/js/crud.js";
 
     import { loadProviders } from "$lib/js/providersCrud.js";
+    import { loadCategories } from "$lib/js/categoriesCrud.js";
 
     // DATA
     let products = [];
     let providers = [];
+    let categories = [];
     let editingDocId = null; // Firestore docId when editing
     let product = emptyProduct();
 
@@ -47,6 +49,7 @@
     async function refresh() {
         products = await loadProducts();
         providers = await loadProviders();
+        categories = await loadCategories();
     }
 
     function clearForm() {
@@ -64,23 +67,14 @@
             valorCompra: p.valorCompra ?? 0,
             valorVenta: p.valorVenta ?? 0,
             providerId: p.providerId ?? null,
+            categoryId: p.categoryId ?? null,
             image: p.image ?? "",
             clothingType: p.clothingType ?? "top",
-            sizes:
-                p.clothingType === "bottom"
-                    ? { xs: 0, s: 0, m: 0, l: 0, xl: 0, universal: 0 }
-                    : {
-                          ...{ xs: 0, s: 0, m: 0, l: 0, xl: 0, universal: 0 },
-                          ...(p.sizes ?? {}),
-                      },
-            numericSizes:
-                p.clothingType === "bottom"
-                    ? Array.isArray(p.numericSizes)
-                        ? p.numericSizes
-                        : []
-                    : [],
+            sizes: p.sizes ?? { xs: 0, s: 0, m: 0, l: 0, xl: 0, universal: 0 },
+            numericSizes: p.numericSizes ?? [],
             stock: p.stock ?? 0,
         };
+        // Scroll to top for better UX
         window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
@@ -130,10 +124,22 @@
         await refresh();
     }
 
-    async function remove(docId) {
-        if (!confirm("¿Eliminar producto?")) return;
-        await deleteProductByDocId(docId);
-        await refresh();
+    async function handleDelete(docId) {
+        if (!confirm("¿Estás seguro de que deseas eliminar este producto?"))
+            return;
+        try {
+            await deleteProductByDocId(docId);
+            // Clear the form if the deleted product was being edited
+            if (editingDocId === docId) {
+                clearForm();
+            }
+            await refresh();
+        } catch (error) {
+            console.error("Error al eliminar el producto:", error);
+            alert(
+                "No se pudo eliminar el producto. Por favor, inténtalo de nuevo.",
+            );
+        }
     }
 
     const imgSrc = (p) =>
@@ -226,10 +232,31 @@
                         >
                             <option value={null}>Seleccione un proveedor</option
                             >
-                            {#each providers as pr}
-                                <option value={pr.id}
-                                    >{pr.empresa} — {pr.nombre}</option
-                                >
+                            {#each providers as p}
+                                <option value={p.docId}>
+                                    {p.nombre}
+                                </option>
+                            {/each}
+                        </select>
+                    </div>
+
+                    <!-- Categoría -->
+                    <div>
+                        <label for="category" class="text-sm text-gray-300">
+                            Categoría
+                        </label>
+                        <select
+                            id="category"
+                            class="w-full px-3 py-2 rounded bg-gray-900 text-white"
+                            bind:value={product.categoryId}
+                        >
+                            <option value={null}
+                                >Seleccione una categoría</option
+                            >
+                            {#each categories as cat}
+                                <option value={cat.docId}>
+                                    {cat.nombre} ({cat.codigo})
+                                </option>
                             {/each}
                         </select>
                     </div>
@@ -361,6 +388,7 @@
                                         >
                                             {item.size} — {item.quantity}
                                             <button
+                                                aria-label="Eliminar talla"
                                                 type="button"
                                                 class="ml-1 text-red-400 hover:text-red-600"
                                                 on:click={() =>
@@ -420,18 +448,26 @@
                 >
                     {#if products.length === 0}
                         <div
-                            class="col-span-full text-center py-12 text-gray-400 border border-gray-700 rounded"
+                            class="bg-gray-800 col-span-full rounded-lg border-2 border-dashed border-gray-700 p-8 text-center"
                         >
-                            No hay productos
+                            <i class="fas fa-tshirt text-4xl text-gray-600 mb-2"
+                            ></i>
+                            <p class="text-gray-400">
+                                No hay prendas registradas
+                            </p>
+                            <p class="text-sm text-gray-500 mt-1">
+                                Crea tu primera prenda
+                            </p>
                         </div>
                     {:else}
                         {#each products as p (p.docId)}
                             <ProductCard
                                 product={p}
                                 {providers}
+                                {categories}
                                 {imgSrc}
-                                onEdit={startEdit}
-                                onDelete={remove}
+                                onEdit={() => startEdit(p)}
+                                onDelete={() => handleDelete(p.docId)}
                             />
                         {/each}
                     {/if}

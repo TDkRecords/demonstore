@@ -21,6 +21,7 @@ export const emptyProduct = () => ({
     valorVenta: 0,
     image: "",
     providerId: null,
+    categoryId: null, // Reference to the category document ID
     clothingType: "top", // 'top' or 'bottom'
     sizes: { xs: 0, s: 0, m: 0, l: 0, xl: 0, universal: 0 }, // for top
     numericSizes: [], // for bottom

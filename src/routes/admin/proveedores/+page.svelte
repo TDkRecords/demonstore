@@ -357,9 +357,15 @@
                 >
                     {#if providers.length === 0}
                         <div
-                            class="col-span-full text-center py-12 text-gray-400 border border-gray-700 rounded"
+                            class="bg-gray-800 col-span-full rounded-lg border-2 border-dashed border-gray-700 p-8 text-center"
                         >
-                            No hay proveedores
+                            <i
+                                class="fas fa-box-open text-4xl text-gray-600 mb-2"
+                            ></i>
+                            <p class="text-gray-400">No hay proveedores</p>
+                            <p class="text-sm text-gray-500 mt-1">
+                                Crea tu primer proveedor
+                            </p>
                         </div>
                     {:else}
                         {#each providers as p (p.docId)}
